@@ -1,7 +1,7 @@
 /*
 @title Launchpad control
 @by Engineer02
-@license MIT
+@license MIT (source code excluding strudel patterns)
 @details This is a control structure for the novation LAUNCHPAD MINI. It allows using pads to toggle functions that alter strudel patterns.
 @version 2.0
 */
