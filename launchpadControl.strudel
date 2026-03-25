@@ -1,0 +1,101 @@
+/*
+@title Launchpad control
+@by Engineer02
+@license MIT
+@details This is a control structure for the novation LAUNCHPAD MINI. It allows using pads to toggle functions that alter strudel patterns.
+@version 2.0
+*/
+
+enableWebMidi();
+
+const MIDI_DEVICE_INDEX = 1;
+const LED_ACTIVE_COLOR = 60;
+const LED_INACTIVE_COLOR = 15;
+const input = WebMidi.inputs[MIDI_DEVICE_INDEX];
+const output = WebMidi.outputs[MIDI_DEVICE_INDEX].channels[1];
+const pads = globalThis.__pads ??= {};
+
+resetPads();
+
+input.removeListener('noteon');
+input.addListener('noteon', ({ note }) => {
+  const id = note.identifier;
+  const pad = pads[id];
+  if (!pad) return;
+  pad.active = !pad.active
+  updateLED(id);
+  console.log(id, pad.active ? '→ on' : '→ off');
+});
+
+function updateLED (id) {
+  const pad = pads[id];
+  if(!pad) return;
+  if(!pad.used) {
+    output.stopNote(id);
+  } else {
+    output.playNote(id, { rawAttack: pad.active ? LED_ACTIVE_COLOR : LED_INACTIVE_COLOR});
+  }   
+}
+
+function resetPads(){
+  for (const [padId, pad] of Object.entries(pads)){
+    if(!pads[padId].used) pads[padId].active = false;
+    pads[padId].used = false;
+    pads[padId].updated = false;
+    updateLED(padId);
+  }
+}
+
+function ensurePad(id) {
+  if(pads[id]) return pads[id];
+  pads[id] = {
+    used: true,
+    active: false,
+    updated: false
+  };
+  return pads[id];
+}
+
+function updatePad(id, pad) {
+  if (!pad.updated) {
+    pad.updated = true;
+    pad.used = true;
+    updateLED(id);
+  }
+}
+
+register('applyOn', function (id, func, pat) {
+  const pad = ensurePad(id);
+  updatePad(id, pad);
+  return pat.when(pad.active, func);
+});
+
+register('playOn', function (id, pat) {
+  const pad = ensurePad(id);
+  updatePad(id, pad);
+  return pat.when(!pad.active, x => x.mask());
+});
+
+register('flashPad', function (id, pat) {
+  const pad = ensurePad(id);
+  updatePad(id, pad);
+  return pat.onTriggerTime((hap) => {
+    if(pad.active) output.playNote(id, { rawAttack: LED_ACTIVE_COLOR });
+    setTimeout(() => { if(pad.active) output.stopNote(id) }, 150);
+  });
+});
+
+
+// Example (inspired by "Bad Apple!!")
+// Original composition by ZUN, popularized by nomico
+// This example is provided for demonstration purposes only.
+// No rights to the original composition are claimed.
+// I'm sure there is a better way of representing this melody, but I'm new to strudel and am happy I got this working.
+setcpm(138/4)
+stack(
+  s("bd bd bd <bd*2 bd*4>").bank("tr909").playOn("C-1").flashPad("C-1"),
+  note("[D#2@2 D#2 D#3 - D#3 C#3 D#3]!! <[D#2@2 F#3 G#3 D#2 G#3 F#3 G#3] [F#3@2 D#2 F#3 G#3@2 F#3 G#3]>".add("0,-12")).slow(2).sound("saw, square").gain("0.3").playOn("C#-1"),
+  note("D#2!32 B2!24 C#3!8").slow(4).sound("saw, square").gain("0.3").playOn("D-1"),
+  note("<[8 10 11 13 15@2 20 18 15@2 8@2 15 13 11 10] [<[8 10 11 13 15@2 13 11]> <[10 8 10 11 10 8 7 10] [10@2 11@2 13@2 15@2]> ]>".add("55")).sound("piano").slow(2).playOn("D#-1"),
+  note("6 8 3 1 3@2 1 3 6 8 3 1 3@2 1 3 1 -1 -2 -6 -4@2 -6 -4 -2 -1 1 3 -4@2 3 6".add("<67 [67@14 74 74 77 78 77 79 74 74 74 74 70 67 64 58 67 67 67 67]>")).sound("piano").slow(4).playOn("E-1")
+)
