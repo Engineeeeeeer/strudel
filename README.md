@@ -4,7 +4,7 @@ A collection of small scripts, experiments, and utilities for use with [Strudel]
 
 ## Overview
 
-This repository contains various Strudel snippets, ranging from simple pattern experiments to more advanced control structures.
+This repository contains various Strudel snippets, ranging from simple experiments to more advanced control structures.
 
 ## Usage
 
